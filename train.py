@@ -35,6 +35,8 @@ def get_parser():
                         help="Save the model periodically (0 to disable)")
     parser.add_argument("--exp_id", type=str, default="",
                         help="Experiment ID")
+    parser.add_argument("--seed", type=int, default=-1,
+                        help="Random seed for weight init (default is not to fix the seed.)")
 
     # float16 / AMP API
     parser.add_argument("--fp16", type=bool_flag, default=False,
