@@ -35,8 +35,11 @@ def get_parser():
                         help="Save the model periodically (0 to disable)")
     parser.add_argument("--exp_id", type=str, default="",
                         help="Experiment ID")
-    parser.add_argument("--seed", type=int, default=-1,
+    parser.add_argument("--weight_seed", type=int, default=-1,
                         help="Random seed for weight init (default is not to fix the seed.)")
+    parser.add_argument("--iter_seed", type=int, default=12345,
+                        help="Random seed for data iteration. Default allows determinism.")
+
 
     # float16 / AMP API
     parser.add_argument("--fp16", type=bool_flag, default=False,
@@ -47,6 +50,8 @@ def get_parser():
     # only use an encoder (use a specific decoder for machine translation)
     parser.add_argument("--encoder_only", type=bool_flag, default=True,
                         help="Only use an encoder")
+    parser.add_argument("--disable_encoder_preds", action='store_true',
+                        help="Do not add softmax layer on top of the encoder.")
 
     # model parameters
     parser.add_argument("--emb_dim", type=int, default=512,
@@ -175,6 +180,12 @@ def get_parser():
     parser.add_argument("--reload_emb", type=str, default="", help="Reload pretrained word embeddings")
     parser.add_argument("--reload_model", type=str, default="", help="Reload a pretrained model")
     parser.add_argument("--reload_checkpoint", type=str, default="", help="Reload a checkpoint")
+    parser.add_argument("--init_dec_from_enc", action='store_true',
+                        help="Initialize missing decoder params from encoder layers.")
+    parser.add_argument("--reset_dec_output_bias", action='store_true',
+                        help="If reloading model, reset output layer bias for decoder.")
+    parser.add_argument("--freeze_encoder", action='store_true',
+                        help="Freeze encoder in enc-dec setups i.e MT finetuning.")
 
     # beam search (for MT only)
     parser.add_argument("--beam_size", type=int, default=1,
@@ -310,6 +321,14 @@ if __name__ == '__main__':
         params.exp_id = 'debug_%08i' % random.randint(0, 100000000)
         params.debug_slurm = True
         params.debug_train = True
+
+    if params.weight_seed == -1:
+        # stochastic
+        params.weight_seed = None
+
+    if params.iter_seed == -1:
+        # stochastic
+        params.iter_seed = None
 
     # check parameters
     check_data_params(params)
