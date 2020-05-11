@@ -49,14 +49,6 @@ def Embedding(num_embeddings, embedding_dim, padding_idx=None):
     return m
 
 
-def Linear(in_features, out_features, bias=True):
-    m = nn.Linear(in_features, out_features, bias)
-    # nn.init.normal_(m.weight, mean=0, std=1)
-    # nn.init.xavier_uniform_(m.weight)
-    # nn.init.constant_(m.bias, 0.)
-    return m
-
-
 def create_sinusoidal_embeddings(n_pos, dim, out):
     position_enc = np.array([
         [pos / np.power(10000, 2 * (j // 2) / dim) for j in range(dim)]
@@ -102,7 +94,7 @@ class PredLayer(nn.Module):
         dim = params.emb_dim
 
         if params.asm is False:
-            self.proj = Linear(dim, params.n_words, bias=True)
+            self.proj = nn.Linear(dim, params.n_words, bias=True)
         else:
             self.proj = nn.AdaptiveLogSoftmaxWithLoss(
                 in_features=dim,
@@ -147,10 +139,10 @@ class MultiHeadAttention(nn.Module):
         self.dropout = dropout
         assert self.dim % self.n_heads == 0
 
-        self.q_lin = Linear(dim, dim)
-        self.k_lin = Linear(dim, dim)
-        self.v_lin = Linear(dim, dim)
-        self.out_lin = Linear(dim, dim)
+        self.q_lin = nn.Linear(dim, dim)
+        self.k_lin = nn.Linear(dim, dim)
+        self.v_lin = nn.Linear(dim, dim)
+        self.out_lin = nn.Linear(dim, dim)
 
     def forward(self, input, mask, kv=None, cache=None):
         """
@@ -213,8 +205,8 @@ class TransformerFFN(nn.Module):
     def __init__(self, in_dim, dim_hidden, out_dim, dropout, gelu_activation):
         super().__init__()
         self.dropout = dropout
-        self.lin1 = Linear(in_dim, dim_hidden)
-        self.lin2 = Linear(dim_hidden, out_dim)
+        self.lin1 = nn.Linear(in_dim, dim_hidden)
+        self.lin2 = nn.Linear(dim_hidden, out_dim)
         self.act = F.gelu if gelu_activation else F.relu
 
     def forward(self, input):
