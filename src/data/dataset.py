@@ -255,6 +255,9 @@ class ParallelDataset(Dataset):
         self.lengths1 = self.pos1[:, 1] - self.pos1[:, 0]
         self.lengths2 = self.pos2[:, 1] - self.pos2[:, 0]
 
+        # Create RNG
+        self._rng = np.random.RandomState(seed=params.iter_seed)
+
         # check number of sentences
         assert len(self.pos1) == (self.sent1 == self.eos_index).sum()
         assert len(self.pos2) == (self.sent2 == self.eos_index).sum()
@@ -351,7 +354,7 @@ class ParallelDataset(Dataset):
 
         for sentence_ids in batches:
             if 0 < self.max_batch_size < len(sentence_ids):
-                np.random.shuffle(sentence_ids)
+                self._rng.shuffle(sentence_ids)
                 sentence_ids = sentence_ids[:self.max_batch_size]
             pos1 = self.pos1[sentence_ids]
             pos2 = self.pos2[sentence_ids]
@@ -372,7 +375,7 @@ class ParallelDataset(Dataset):
 
         # select sentences to iterate over
         if shuffle:
-            indices = np.random.permutation(len(self.pos1))[:n_sentences]
+            indices = self._rng.permutation(len(self.pos1))[:n_sentences]
         else:
             indices = np.arange(n_sentences)
 
@@ -392,12 +395,11 @@ class ParallelDataset(Dataset):
 
         # optionally shuffle batches
         if shuffle:
-            np.random.shuffle(batches)
+            self._rng.shuffle(batches)
 
         # sanity checks
         assert n_sentences == sum([len(x) for x in batches])
         assert lengths[indices].sum() == sum([lengths[x].sum() for x in batches])
-        # assert set.union(*[set(x.tolist()) for x in batches]) == set(range(n_sentences))  # slow
 
         # return the iterator
         return self.get_batches_iterator(batches, return_indices)
