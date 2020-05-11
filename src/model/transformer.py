@@ -13,7 +13,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from .memory import HashingMemory
 
 
 N_MAX_POSITIONS = 512  # maximum input sequence length
@@ -210,16 +209,18 @@ class TransformerFFN(nn.Module):
         self.act = F.gelu if gelu_activation else F.relu
 
     def forward(self, input):
-        x = self.lin1(input)
-        x = self.act(x)
-        x = self.lin2(x)
-        x = F.dropout(x, p=self.dropout, training=self.training)
-        return x
+        return F.dropout(
+            self.lin2(self.act(self.lin1(input))),
+            p=self.dropout, training=self.training)
 
 
 class TransformerModel(nn.Module):
 
-    ATTRIBUTES = ['encoder', 'with_output', 'eos_index', 'pad_index', 'n_langs', 'n_words', 'dim', 'n_layers', 'n_heads', 'hidden_dim', 'dropout', 'attention_dropout', 'asm', 'asm_cutoffs', 'asm_div_value']
+    ATTRIBUTES = [
+        'encoder', 'with_output', 'eos_index', 'pad_index', 'n_langs',
+        'n_words', 'dim', 'n_layers', 'n_heads', 'hidden_dim', 'dropout',
+        'attention_dropout', 'asm', 'asm_cutoffs', 'asm_div_value',
+    ]
 
     def __init__(self, params, dico, is_encoder, with_output):
         """
@@ -233,14 +234,15 @@ class TransformerModel(nn.Module):
         self.with_output = with_output
 
         # dictionary / languages
+        self.dico = dico
         self.n_langs = params.n_langs
         self.n_words = params.n_words
         self.eos_index = params.eos_index
         self.pad_index = params.pad_index
-        self.dico = dico
         self.id2lang = params.id2lang
         self.lang2id = params.lang2id
         self.use_lang_emb = getattr(params, 'use_lang_emb', True)
+
         assert len(self.dico) == self.n_words
         assert len(self.id2lang) == len(self.lang2id) == self.n_langs
 
@@ -251,14 +253,18 @@ class TransformerModel(nn.Module):
         self.n_layers = params.n_layers
         self.dropout = params.dropout
         self.attention_dropout = params.attention_dropout
-        assert self.dim % self.n_heads == 0, 'transformer dim must be a multiple of n_heads'
+        assert self.dim % self.n_heads == 0, \
+            'transformer dim must be a multiple of n_heads'
 
         # embeddings
         self.position_embeddings = Embedding(N_MAX_POSITIONS, self.dim)
+
         if params.sinusoidal_embeddings:
             create_sinusoidal_embeddings(N_MAX_POSITIONS, self.dim, out=self.position_embeddings.weight)
+
         if params.n_langs > 1 and self.use_lang_emb:
             self.lang_embeddings = Embedding(self.n_langs, self.dim)
+
         self.embeddings = Embedding(self.n_words, self.dim, padding_idx=self.pad_index)
         self.layer_norm_emb = nn.LayerNorm(self.dim, eps=1e-12)
 
@@ -267,6 +273,7 @@ class TransformerModel(nn.Module):
         self.layer_norm1 = nn.ModuleList()
         self.ffns = nn.ModuleList()
         self.layer_norm2 = nn.ModuleList()
+
         if self.is_decoder:
             self.layer_norm15 = nn.ModuleList()
             self.encoder_attn = nn.ModuleList()
@@ -274,6 +281,8 @@ class TransformerModel(nn.Module):
         # memories
         self.memories = nn.ModuleDict()
         if getattr(params, 'use_memory', False):
+            from .memory import HashingMemory
+
             mem_positions = params.mem_enc_positions if is_encoder else params.mem_dec_positions
             for layer_id, pos in mem_positions:
                 assert 0 <= layer_id <= params.n_layers - 1
@@ -283,13 +292,16 @@ class TransformerModel(nn.Module):
         for layer_id in range(self.n_layers):
             self.attentions.append(MultiHeadAttention(self.n_heads, self.dim, dropout=self.attention_dropout))
             self.layer_norm1.append(nn.LayerNorm(self.dim, eps=1e-12))
+
             if self.is_decoder:
                 self.layer_norm15.append(nn.LayerNorm(self.dim, eps=1e-12))
                 self.encoder_attn.append(MultiHeadAttention(self.n_heads, self.dim, dropout=self.attention_dropout))
+
             if ('%i_in' % layer_id) in self.memories:
                 self.ffns.append(None)
             else:
                 self.ffns.append(TransformerFFN(self.dim, self.hidden_dim, self.dim, dropout=self.dropout, gelu_activation=params.gelu_activation))
+
             self.layer_norm2.append(nn.LayerNorm(self.dim, eps=1e-12))
 
         # output layer
@@ -319,23 +331,23 @@ class TransformerModel(nn.Module):
             `positions` LongTensor(slen, bs), containing word positions
             `langs` LongTensor(slen, bs), containing language IDs
         """
-        # lengths = (x != self.pad_index).float().sum(dim=1)
-        # mask = x != self.pad_index
-
         # check inputs
         slen, bs = x.size()
         assert lengths.size(0) == bs
         assert lengths.max().item() <= slen
-        x = x.transpose(0, 1)  # batch size as dimension 0
         assert (src_enc is None) == (src_len is None)
+
         if src_enc is not None:
             assert self.is_decoder
             assert src_enc.size(0) == bs
 
+        x = x.transpose(0, 1)  # batch size as dimension 0
+
         # generate masks
         mask, attn_mask = get_masks(slen, lengths, causal)
         if self.is_decoder and src_enc is not None:
-            src_mask = torch.arange(src_len.max(), dtype=torch.long, device=lengths.device) < src_len[:, None]
+            src_mask = torch.arange(
+                src_len.max(), dtype=torch.long, device=lengths.device) < src_len[:, None]
 
         # positions
         if positions is None:
@@ -390,11 +402,13 @@ class TransformerModel(nn.Module):
                 tensor = tensor + self.memories['%i_in' % i](tensor)
             else:
                 tensor = tensor + self.ffns[i](tensor)
+
             tensor = self.layer_norm2[i](tensor)
 
             # memory
             if ('%i_after' % i) in self.memories:
                 tensor = tensor + self.memories['%i_after' % i](tensor)
+
             # TODO: add extra layer norm here?
 
             tensor *= mask.unsqueeze(-1).to(tensor.dtype)
@@ -404,9 +418,7 @@ class TransformerModel(nn.Module):
             cache['slen'] += tensor.size(1)
 
         # move back sequence length to dimension 0
-        tensor = tensor.transpose(0, 1)
-
-        return tensor
+        return tensor.transpose(0, 1)
 
     def predict(self, tensor, pred_mask, y, get_scores):
         """
@@ -652,15 +664,6 @@ class TransformerModel(nn.Module):
             # stop when we are done with each sentence
             if all(done):
                 break
-
-        # visualize hypotheses
-        # print([len(x) for x in generated_hyps], cur_len)
-        # globals().update( locals() );
-        # !import code; code.interact(local=vars())
-        # for ii in range(bs):
-        #     for ss, ww in sorted(generated_hyps[ii].hyp, key=lambda x: x[0], reverse=True):
-        #         print("%.3f " % ss + " ".join(self.dico[x] for x in ww.tolist()))
-        #     print("")
 
         # select the best hypotheses
         tgt_len = src_len.new(bs)
