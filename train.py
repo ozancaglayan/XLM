@@ -66,7 +66,9 @@ def get_parser():
     parser.add_argument("--use_lang_emb", type=bool_flag, default=True,
                         help="Use language embedding")
 
+    ###################
     # memory parameters
+    ###################
     parser.add_argument("--use_memory", type=bool_flag, default=False,
                         help="Use an external memory")
     if parser.parse_known_args()[0].use_memory:
@@ -76,7 +78,9 @@ def get_parser():
         parser.add_argument("--mem_dec_positions", type=str, default="",
                             help="Memory positions in the decoder. Same syntax as `mem_enc_positions`.")
 
+    ###################
     # adaptive softmax
+    ###################
     parser.add_argument("--asm", type=bool_flag, default=False,
                         help="Use adaptive softmax")
     if parser.parse_known_args()[0].asm:
@@ -139,7 +143,7 @@ def get_parser():
     parser.add_argument("--clip_grad_norm", type=float, default=5,
                         help="Clip gradients norm (0 to disable)")
     parser.add_argument("--epoch_size", type=int, default=100000,
-                        help="Epoch size / evaluation frequency (-1 for parallel data size)")
+                        help="Pseudo-epoch size for periodic evaluation frequency (-1 for parallel data size)")
     parser.add_argument("--max_epoch", type=int, default=100000,
                         help="Maximum epoch size")
     parser.add_argument("--stopping_criterion", type=str, default="",
@@ -150,40 +154,25 @@ def get_parser():
                         help="Accumulate model gradients over N iterations (N times larger batch sizes)")
 
     # training coefficients
-    parser.add_argument("--lambda_mlm", type=str, default="1",
-                        help="Prediction coefficient (MLM)")
-    parser.add_argument("--lambda_clm", type=str, default="1",
-                        help="Causal coefficient (LM)")
-    parser.add_argument("--lambda_pc", type=str, default="1",
-                        help="PC coefficient")
-    parser.add_argument("--lambda_ae", type=str, default="1",
-                        help="AE coefficient")
-    parser.add_argument("--lambda_mt", type=str, default="1",
-                        help="MT coefficient")
-    parser.add_argument("--lambda_bt", type=str, default="1",
-                        help="BT coefficient")
+    parser.add_argument("--lambda_clm", type=str, default="1", help="Causal coefficient (LM)")
+    parser.add_argument("--lambda_mlm", type=str, default="1", help="Prediction coefficient (MLM)")
+    parser.add_argument("--lambda_mt", type=str, default="1", help="MT coefficient")
+    parser.add_argument("--lambda_ae", type=str, default="1", help="AE coefficient")
+    parser.add_argument("--lambda_bt", type=str, default="1", help="BT coefficient")
+    parser.add_argument("--lambda_pc", type=str, default="1", help="PC coefficient")
 
     # training steps
-    parser.add_argument("--clm_steps", type=str, default="",
-                        help="Causal prediction steps (CLM)")
-    parser.add_argument("--mlm_steps", type=str, default="",
-                        help="Masked prediction steps (MLM / TLM)")
-    parser.add_argument("--mt_steps", type=str, default="",
-                        help="Machine translation steps")
-    parser.add_argument("--ae_steps", type=str, default="",
-                        help="Denoising auto-encoder steps")
-    parser.add_argument("--bt_steps", type=str, default="",
-                        help="Back-translation steps")
-    parser.add_argument("--pc_steps", type=str, default="",
-                        help="Parallel classification steps")
+    parser.add_argument("--clm_steps", type=str, default="", help="Causal prediction steps (CLM)")
+    parser.add_argument("--mlm_steps", type=str, default="", help="Masked prediction steps (MLM / TLM)")
+    parser.add_argument("--mt_steps", type=str, default="", help="Machine translation steps")
+    parser.add_argument("--ae_steps", type=str, default="", help="Denoising auto-encoder steps")
+    parser.add_argument("--bt_steps", type=str, default="", help="Back-translation steps")
+    parser.add_argument("--pc_steps", type=str, default="", help="Parallel classification steps")
 
     # reload pretrained embeddings / pretrained model / checkpoint
-    parser.add_argument("--reload_emb", type=str, default="",
-                        help="Reload pretrained word embeddings")
-    parser.add_argument("--reload_model", type=str, default="",
-                        help="Reload a pretrained model")
-    parser.add_argument("--reload_checkpoint", type=str, default="",
-                        help="Reload a checkpoint")
+    parser.add_argument("--reload_emb", type=str, default="", help="Reload pretrained word embeddings")
+    parser.add_argument("--reload_model", type=str, default="", help="Reload a pretrained model")
+    parser.add_argument("--reload_checkpoint", type=str, default="", help="Reload a checkpoint")
 
     # beam search (for MT only)
     parser.add_argument("--beam_size", type=int, default=1,
