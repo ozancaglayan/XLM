@@ -68,11 +68,10 @@ def get_masks(slen, lengths, causal):
     alen = torch.arange(slen, dtype=torch.long, device=lengths.device)
     mask = alen < lengths[:, None]
 
-    # attention mask is the same as mask, or triangular inferior attention (causal)
+    attn_mask = mask
     if causal:
+        # triangular attention mask
         attn_mask = alen[None, None, :].repeat(bs, slen, 1) <= alen[None, :, None]
-    else:
-        attn_mask = mask
 
     # sanity check
     assert mask.size() == (bs, slen)
