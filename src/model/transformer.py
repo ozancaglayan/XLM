@@ -68,17 +68,6 @@ def create_sinusoidal_embeddings(n_pos, dim, out):
     out.requires_grad = False
 
 
-def gelu(x):
-    """
-    GELU activation
-    https://arxiv.org/abs/1606.08415
-    https://github.com/huggingface/pytorch-openai-transformer-lm/blob/master/model_pytorch.py#L14
-    https://github.com/huggingface/pytorch-pretrained-BERT/blob/master/modeling.py
-    """
-    # return 0.5 * x * (1 + torch.tanh(math.sqrt(2 / math.pi) * (x + 0.044715 * torch.pow(x, 3))))
-    return 0.5 * x * (1.0 + torch.erf(x / math.sqrt(2.0)))
-
-
 def get_masks(slen, lengths, causal):
     """
     Generate hidden states mask, and optionally an attention mask.
@@ -226,7 +215,7 @@ class TransformerFFN(nn.Module):
         self.dropout = dropout
         self.lin1 = Linear(in_dim, dim_hidden)
         self.lin2 = Linear(dim_hidden, out_dim)
-        self.act = gelu if gelu_activation else F.relu
+        self.act = F.gelu if gelu_activation else F.relu
 
     def forward(self, input):
         x = self.lin1(input)
