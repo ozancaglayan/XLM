@@ -129,7 +129,7 @@ class MultiHeadAttention(nn.Module):
 
     NEW_ID = itertools.count()
 
-    def __init__(self, n_heads, dim, dropout):
+    def __init__(self, n_heads, dim, dropout, bias=True):
         super().__init__()
         self.layer_id = next(MultiHeadAttention.NEW_ID)
         self.dim = dim
@@ -137,10 +137,10 @@ class MultiHeadAttention(nn.Module):
         self.dropout = dropout
         assert self.dim % self.n_heads == 0
 
-        self.q_lin = nn.Linear(dim, dim)
-        self.k_lin = nn.Linear(dim, dim)
-        self.v_lin = nn.Linear(dim, dim)
-        self.out_lin = nn.Linear(dim, dim)
+        self.q_lin = nn.Linear(dim, dim, bias=bias)
+        self.k_lin = nn.Linear(dim, dim, bias=bias)
+        self.v_lin = nn.Linear(dim, dim, bias=bias)
+        self.out_lin = nn.Linear(dim, dim, bias=bias)
 
     def forward(self, input, mask, kv=None, cache=None):
         """
@@ -289,12 +289,14 @@ class TransformerModel(nn.Module):
                 self.memories['%i_%s' % (layer_id, pos)] = HashingMemory.build(self.dim, self.dim, params)
 
         for layer_id in range(self.n_layers):
-            self.attentions.append(MultiHeadAttention(self.n_heads, self.dim, dropout=self.attention_dropout))
+            self.attentions.append(
+                MultiHeadAttention(self.n_heads, self.dim, dropout=self.attention_dropout, bias=not params.attention_nobias))
             self.layer_norm1.append(nn.LayerNorm(self.dim, eps=1e-12))
 
             if self.is_decoder:
                 self.layer_norm15.append(nn.LayerNorm(self.dim, eps=1e-12))
-                self.encoder_attn.append(MultiHeadAttention(self.n_heads, self.dim, dropout=self.attention_dropout))
+                self.encoder_attn.append(
+                    MultiHeadAttention(self.n_heads, self.dim, dropout=self.attention_dropout, bias=not params.attention_nobias))
 
             if ('%i_in' % layer_id) in self.memories:
                 self.ffns.append(None)

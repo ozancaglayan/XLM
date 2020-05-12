@@ -64,6 +64,8 @@ def get_parser():
                         help="Dropout")
     parser.add_argument("--attention_dropout", type=float, default=0,
                         help="Dropout in the attention layer")
+    parser.add_argument("--attention_nobias", action='store_true',
+                        help="Disable bias in multi-head attention.")
     parser.add_argument("--gelu_activation", type=bool_flag, default=False,
                         help="Use a GELU activation instead of ReLU")
     parser.add_argument("--share_inout_emb", type=bool_flag, default=True,
