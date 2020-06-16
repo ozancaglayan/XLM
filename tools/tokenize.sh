@@ -13,7 +13,7 @@ set -e
 N_THREADS=8
 
 lg=$1
-TOOLS_PATH=$PWD/tools
+TOOLS_PATH=${TOOLS_PATH:-$PWD/tools}
 
 # moses
 MOSES=$TOOLS_PATH/mosesdecoder
