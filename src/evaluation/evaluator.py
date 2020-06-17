@@ -128,7 +128,7 @@ class Evaluator(object):
             else:
                 iterator = self.data['mono'][lang1][data_set].get_iterator(
                     shuffle=False,
-                    group_by_size=True,
+                    group_by_size=False,
                     n_sentences=n_sentences,
                 )
         else:
@@ -354,12 +354,10 @@ class Evaluator(object):
         if eval_memory:
             all_mem_att = {k: [] for k, _ in self.memory_list}
 
-        for batch in self.get_iterator(data_set, lang1, lang2, stream=(lang2 is None)):
-
-            # batch
+        for batch in self.get_iterator(data_set, lang1, lang2, stream=(lang2 is None and params.bptt > 0)):
             if lang2 is None:
-                x, lengths = batch
                 positions = None
+                x, lengths = batch
                 langs = x.clone().fill_(lang1_id) if params.n_langs > 1 else None
             else:
                 (sent1, len1), (sent2, len2) = batch

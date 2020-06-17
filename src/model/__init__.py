@@ -22,7 +22,6 @@ def check_model_params(params):
     Check models parameters.
     """
     # masked language modeling task parameters
-    assert params.bptt >= 1
     assert 0 <= params.word_pred < 1
     assert 0 <= params.sample_alpha < 1
     s = params.word_mask_keep_rand.split(',')

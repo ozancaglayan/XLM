@@ -316,7 +316,7 @@ class Trainer(object):
         """
         assert lang1 in self.params.langs
         assert lang2 is None or lang2 in self.params.langs
-        assert stream is False or lang2 is None
+        #assert stream is False or lang2 is None
         iterator = self.iterators.get((iter_name, lang1, lang2), None)
         if iterator is None:
             iterator = self.get_iterator(iter_name, lang1, lang2, stream)
@@ -477,7 +477,7 @@ class Trainer(object):
         lang2_id = params.lang2id[lang2] if lang2 is not None else None
 
         if lang2 is None:
-            x, lengths = self.get_batch(name, lang1, stream=True)
+            x, lengths = self.get_batch(name, lang1, stream=params.bptt > 0)
             positions = None
             langs = x.clone().fill_(lang1_id) if params.n_langs > 1 else None
         elif lang1 == lang2:

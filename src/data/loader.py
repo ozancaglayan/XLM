@@ -126,19 +126,20 @@ def load_mono_data(params, data):
             mono_data = load_binarized(params.mono_dataset[lang][splt], params)
             set_dico_parameters(params, data, mono_data['dico'])
 
-            # create stream dataset
-            bs = params.batch_size if splt == 'train' else 1
-            data['mono_stream'][lang][splt] = StreamDataset(mono_data['sentences'], mono_data['positions'], bs, params)
+            if params.bptt > 0:
+                # create stream dataset
+                bs = params.batch_size if splt == 'train' else 1
+                data['mono_stream'][lang][splt] = StreamDataset(mono_data['sentences'], mono_data['positions'], bs, params)
 
-            # if there are several processes on the same machine, we can split the dataset
-            if splt == 'train' and params.split_data and 1 < params.n_gpu_per_node <= data['mono_stream'][lang][splt].n_batches:
-                n_batches = data['mono_stream'][lang][splt].n_batches // params.n_gpu_per_node
-                a = n_batches * params.local_rank
-                b = n_batches * params.local_rank + n_batches
-                data['mono_stream'][lang][splt].select_data(a, b)
+                # if there are several processes on the same machine, we can split the dataset
+                if splt == 'train' and params.split_data and 1 < params.n_gpu_per_node <= data['mono_stream'][lang][splt].n_batches:
+                    n_batches = data['mono_stream'][lang][splt].n_batches // params.n_gpu_per_node
+                    a = n_batches * params.local_rank
+                    b = n_batches * params.local_rank + n_batches
+                    data['mono_stream'][lang][splt].select_data(a, b)
 
             # for denoising auto-encoding and online back-translation, we need a non-stream (batched) dataset
-            if lang in params.ae_steps or lang in params.bt_src_langs:
+            if lang in params.ae_steps or lang in params.bt_src_langs or params.bptt == 0:
 
                 # create batched dataset
                 dataset = Dataset(mono_data['sentences'], mono_data['positions'], params)
